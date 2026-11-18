@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aviator Crash | Official Casino Game & Player Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #0b0d10; color: #f1f5f9; user-select: none; }
+    .font-racing { font-family: 'Rajdhani', sans-serif; }
+    .bg-card { background-color: #12151b; border: 1px solid #1e232d; }
+    .bg-panel { background-color: #181c24; border: 1px solid #282e3b; }
+    .bg-darkest { background-color: #08090b; }
+    .text-glow { text-shadow: 0 0 20px rgba(239, 68, 68, 0.7); }
+    .payout-chip { font-family: 'Rajdhani', sans-serif; font-weight: 700; padding: 2px 8px; border-radius: 9999px; font-size: 11px; }
+    .chip-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .chip-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .chip-big { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #282e3b; border-radius: 2px; }
+    .btn-bet { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .btn-cashout { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .btn-waiting { background: #334155; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scroll">
+
+  <!-- TOP HEADER -->
+  <header class="bg-card border-b border-[#1e232d] px-4 py-2.5 flex items-center justify-between sticky top-0 z-40">
+    <!-- LOGO -->
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30">
+        <i class="fa-solid fa-plane-up text-sm"></i>
+      </div>
+      <div class="font-racing text-2xl font-black tracking-wider text-red-500 uppercase flex items-center gap-1">
+        AVIATOR <span class="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20 font-bold">PRO</span>
+      </div>
+    </div>
+
+    <!-- WALLET & USER BUTTONS -->
+    <div class="flex items-center gap-2.5">
+      <!-- BALANCE PILL -->
+      <div class="flex items-center bg-darkest px-3 py-1.5 rounded-full border border-[#282e3b]">
+        <div class="flex flex-col text-right mr-2">
+          <span class="text-[9px] uppercase tracking-wider text-gray-400 font-semibold leading-none">Wallet</span>
+          <span class="text-sm font-racing font-bold text-emerald-400 leading-tight">
+            ₹<span id="topBalance">0.00</span>
+          </span>
+        </div>
+        <button onclick="openDepositModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition shadow-md shadow-emerald-600/30">
+          <i class="fa-solid fa-plus text-[10px]"></i> Deposit
+        </button>
+      </div>
+
+      <!-- WITHDRAW BUTTON -->
+      <button onclick="openWithdrawModal()" class="hidden md:flex bg-slate-800 hover:bg-slate-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 items-center gap-1.5 transition">
+        <i class="fa-solid fa-arrow-up-from-bracket text-[10px] text-amber-400"></i> Withdraw
+      </button>
+
+      <!-- DOWNLOAD APP BUTTON -->
+      <a href="/download" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-mobile-screen text-[10px]"></i> App APK
+      </a>
+
+      <!-- AUTH USER / LOGIN BUTTON -->
+      <div id="authArea">
+        <button onclick="openAuthModal('login')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full transition shadow-md shadow-red-600/30">
+          Sign In
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAST ROUNDS MULTIPLIER BAR -->
+  <div class="bg-darkest border-b border-[#1e232d] px-4 py-1.5 flex items-center gap-2 overflow-x-auto custom-scroll flex-nowrap" id="historyChips">
+    <!-- Chips populated by socket -->
+    <span class="payout-chip chip-blue">1.45x</span>
+    <span class="payout-chip chip-purple">2.80x</span>
+    <span class="payout-chip chip-big">12.40x</span>
+  </div>
+
+  <!-- MAIN GAME SCREEN -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+    <!-- LEFT SIDEBAR: ALL BETS & MY BETS TABS -->
+    <aside class="w-full lg:w-80 bg-card border-r border-[#1e232d] flex flex-col order-2 lg:order-1 h-72 lg:h-auto overflow-hidden">
+      <!-- TABS -->
+      <div class="grid grid-cols-2 bg-darkest p-1 border-b border-[#1e232d] text-xs font-bold uppercase tracking-wider">
+        <button id="tabAllBetsBtn" onclick="switchSidebarTab('all')" class="py-2 rounded-lg bg-card text-white text-center">
+          All Bets (<span id="allBetsCount">0</span>)
+        </button>
+        <button id="tabMyBetsBtn" onclick="switchSidebarTab('my')" class="py-2 rounded-lg text-gray-400 hover:text-white text-center">
+          My Bets
+        </button>
+      </div>
+
+      <!-- ALL BETS LIST -->
+      <div id="allBetsContainer" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll">
+        <div class="text-center text-xs text-gray-500 py-6">Connecting to live round...</div>
+      </div>
+
+      <!-- MY BETS LIST -->
+      <div id="myBetsContainer" class="hidden flex-1 overflow-y-auto p-2 space-y-1 custom-scroll">
+        <div class="text-center text-xs text-gray-500 py-6">No bets placed yet.</div>
+      </div>
+    </aside>
+
+    <!-- RIGHT/CENTER: AVIATOR CANVAS + DUAL BET PANELS -->
+    <main class="flex-1 flex flex-col order-1 lg:order-2 bg-darkest p-3 md:p-5 overflow-y-auto custom-scroll">
+
+      <!-- STAGE BOARD: CANVAS FLIGHT VIEW -->
+      <div class="relative w-full h-64 md:h-96 rounded-2xl bg-[#090b0e] border border-[#1e232d] overflow-hidden flex items-center justify-center shadow-inner">
+        <!-- CANVAS -->
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- WAITING STATE OVERLAY -->
+        <div id="waitingOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs z-10 transition-opacity">
+          <div class="w-16 h-16 rounded-full border-4 border-red-500/20 border-t-red-500 animate-spin mb-3"></div>
+          <div class="font-racing text-lg md:text-xl font-bold uppercase tracking-wider text-white">WAITING FOR NEXT ROUND</div>
+          <div class="w-48 md:w-64 bg-slate-800 h-1.5 rounded-full overflow-hidden mt-3">
+            <div id="waitingBar" class="bg-red-500 h-full w-full transition-all duration-100 ease-linear"></div>
+          </div>
+        </div>
+
+        <!-- FLEW AWAY OVERLAY -->
+        <div id="flewAwayOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-10">
+          <div class="font-racing text-2xl md:text-3xl font-extrabold uppercase tracking-widest text-red-500 animate-bounce">
+            FLEW AWAY!
+          </div>
+          <div class="font-racing text-5xl md:text-7xl font-black text-white" id="crashResultNumber">
+            1.00x
+          </div>
+        </div>
+
+        <!-- LIVE MULTIPLIER DISPLAY (OVER CANVAS) -->
+        <div id="liveMultiplierWrap" class="absolute pointer-events-none z-10 flex flex-col items-center">
+          <div class="font-racing font-black text-6xl md:text-8xl text-white tracking-tight drop-shadow-2xl" id="centerMultiplierText">
+            1.00x
+          </div>
+        </div>
+      </div>
+
+      <!-- DUAL BET CONTROLS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+
+        <!-- BET PANEL 1 (f) -->
+        <div class="bg-panel rounded-2xl p-4 border border-[#282e3b] flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold uppercase text-gray-400 tracking-wider">Bet 1</span>
+            <!-- AUTO CASHOUT TOGGLE -->
+            <label class="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+              <input type="checkbox" id="autoCashout1" class="rounded text-red-500 focus:ring-0">
+              <span class="text-[11px] font-semibold">Auto Cashout</span>
+              <input type="number" id="autoTarget1" value="2.00" step="0.10" min="1.01" class="w-14 bg-darkest border border-slate-700 rounded px-1.5 py-0.5 text-xs font-bold text-center text-white">
+              <span class="text-[10px] text-gray-400">x</span>
+            </label>
+          </div>
+
+          <div class="flex gap-3">
+            <!-- AMOUNT CONTROLS -->
+            <div class="flex-1 flex flex-col justify-between">
+              <div class="flex items-center bg-darkest border border-[#282e3b] rounded-xl p-1 mb-2">
+                <button onclick="adjustBet('f', -10)" class="w-9 h-9 rounded-lg bg-slate-800 text-gray-300 font-bold hover:bg-slate-700 text-lg">-</button>
+                <input type="number" id="betAmount_f" value="20" min="10" max="10000" class="flex-1 bg-transparent text-center font-racing text-xl font-bold text-white focus:outline-none">
+                <button onclick="adjustBet('f', 10)" class="w-9 h-9 rounded-lg bg-slate-800 text-gray-300 font-bold hover:bg-slate-700 text-lg">+</button>
+              </div>
+
+              <!-- PRESETS -->
+              <div class="grid grid-cols-4 gap-1.5">
+                <button onclick="setBetAmount('f', 20)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹20</button>
+                <button onclick="setBetAmount('f', 50)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹50</button>
+                <button onclick="setBetAmount('f', 100)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹100</button>
+                <button onclick="setBetAmount('f', 500)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹500</button>
+              </div>
+            </div>
+
+            <!-- ACTION BUTTON -->
+            <div class="w-36 flex flex-col">
+              <button id="btnAction_f" onclick="handleBetClick('f')" class="flex-1 rounded-2xl btn-bet text-white font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition active:scale-95">
+                <span id="btnText_f">BET</span>
+                <span id="btnSub_f" class="text-xs font-semibold tracking-normal text-emerald-100">₹20.00</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BET PANEL 2 (s) -->
+        <div class="bg-panel rounded-2xl p-4 border border-[#282e3b] flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold uppercase text-gray-400 tracking-wider">Bet 2</span>
+            <!-- AUTO CASHOUT TOGGLE -->
+            <label class="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+              <input type="checkbox" id="autoCashout2" class="rounded text-red-500 focus:ring-0">
+              <span class="text-[11px] font-semibold">Auto Cashout</span>
+              <input type="number" id="autoTarget2" value="2.00" step="0.10" min="1.01" class="w-14 bg-darkest border border-slate-700 rounded px-1.5 py-0.5 text-xs font-bold text-center text-white">
+              <span class="text-[10px] text-gray-400">x</span>
+            </label>
+          </div>
+
+          <div class="flex gap-3">
+            <!-- AMOUNT CONTROLS -->
+            <div class="flex-1 flex flex-col justify-between">
+              <div class="flex items-center bg-darkest border border-[#282e3b] rounded-xl p-1 mb-2">
+                <button onclick="adjustBet('s', -10)" class="w-9 h-9 rounded-lg bg-slate-800 text-gray-300 font-bold hover:bg-slate-700 text-lg">-</button>
+                <input type="number" id="betAmount_s" value="50" min="10" max="10000" class="flex-1 bg-transparent text-center font-racing text-xl font-bold text-white focus:outline-none">
+                <button onclick="adjustBet('s', 10)" class="w-9 h-9 rounded-lg bg-slate-800 text-gray-300 font-bold hover:bg-slate-700 text-lg">+</button>
+              </div>
+
+              <!-- PRESETS -->
+              <div class="grid grid-cols-4 gap-1.5">
+                <button onclick="setBetAmount('s', 50)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹50</button>
+                <button onclick="setBetAmount('s', 100)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹100</button>
+                <button onclick="setBetAmount('s', 500)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹500</button>
+                <button onclick="setBetAmount('s', 1000)" class="bg-darkest hover:bg-slate-800 text-[11px] font-bold py-1 rounded text-gray-300 border border-[#282e3b]">₹1000</button>
+              </div>
+            </div>
+
+            <!-- ACTION BUTTON -->
+            <div class="w-36 flex flex-col">
+              <button id="btnAction_s" onclick="handleBetClick('s')" class="flex-1 rounded-2xl btn-bet text-white font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition active:scale-95">
+                <span id="btnText_s">BET</span>
+                <span id="btnSub_s" class="text-xs font-semibold tracking-normal text-emerald-100">₹50.00</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- DEPOSIT MODAL -->
+  <div id="depositModal" class="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-card w-full max-w-md p-6 rounded-2xl border border-card shadow-2xl relative">
+      <button onclick="closeDepositModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-xl">&times;</button>
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-qrcode"></i>
+        </div>
+        <div>
+          <h3 class="font-racing text-xl font-bold uppercase text-white">Deposit Funds (UPI)</h3>
+          <p class="text-xs text-gray-400">Scan QR Code or pay via UPI ID</p>
+        </div>
+      </div>
+
+      <!-- UPI QR DISPLAY -->
+      <div class="bg-white p-4 rounded-xl flex flex-col items-center justify-center mb-4 text-black">
+        <img id="upiQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=aviatoradmin@ybl&pn=Aviator&cu=INR" class="w-40 h-40 mb-2 rounded" alt="UPI QR">
+        <div class="text-xs font-bold text-gray-800" id="depositUpiId">aviatoradmin@ybl</div>
+      </div>
+
+      <form id="depositForm" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Select / Enter Amount (INR)</label>
+          <div class="grid grid-cols-4 gap-1.5 mb-2">
+            <button type="button" onclick="setDepositAmount(100)" class="bg-darkest hover:bg-slate-800 py-1.5 rounded text-xs font-bold border border-[#282e3b]">₹100</button>
+            <button type="button" onclick="setDepositAmount(500)" class="bg-darkest hover:bg-slate-800 py-1.5 rounded text-xs font-bold border border-[#282e3b]">₹500</button>
+            <button type="button" onclick="setDepositAmount(1000)" class="bg-darkest hover:bg-slate-800 py-1.5 rounded text-xs font-bold border border-[#282e3b]">₹1,000</button>
+            <button type="button" onclick="setDepositAmount(5000)" class="bg-darkest hover:bg-slate-800 py-1.5 rounded text-xs font-bold border border-[#282e3b]">₹5,000</button>
+          </div>
+          <input type="number" id="depositAmount" value="500" min="50" required class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">12-Digit UTR / Transaction ID</label>
+          <input type="text" id="depositUtr" placeholder="Enter UTR from payment receipt" class="w-full bg-darkest border border-card rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-600/30">
+            Submit Deposit
+          </button>
+          <button type="button" onclick="instantDemoDeposit()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold px-3 py-2.5 rounded-xl text-xs border border-slate-700 whitespace-nowrap">
+            + Demo ₹1000
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- WITHDRAW MODAL -->
+  <div id="withdrawModal" class="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-card w-full max-w-md p-6 rounded-2xl border border-card shadow-2xl relative">
+      <button onclick="closeWithdrawModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-xl">&times;</button>
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-money-bill-transfer"></i>
+        </div>
+        <div>
+          <h3 class="font-racing text-xl font-bold uppercase text-white">Withdrawal (UPI)</h3>
+          <p class="text-xs text-gray-400">Instant payout to your UPI ID</p>
+        </div>
+      </div>
+
+      <form id="withdrawForm" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Withdraw Amount (INR)</label>
+          <input type="number" id="withdrawAmount" min="100" placeholder="Minimum ₹100" required class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Your UPI ID (VPA)</label>
+          <input type="text" id="withdrawUpiId" placeholder="e.g. 9876543210@paytm" required class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Account Holder Full Name</label>
+          <input type="text" id="withdrawName" placeholder="As registered with UPI" required class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-amber-600/30">
+          Request UPI Payout
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- AUTH (LOGIN/REGISTER) MODAL -->
+  <div id="authModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-card w-full max-w-sm p-6 rounded-2xl border border-card shadow-2xl relative">
+      <button onclick="closeAuthModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-xl">&times;</button>
+      <div class="text-center mb-5">
+        <h3 class="font-racing text-2xl font-black text-white" id="authTitle">PLAYER LOGIN</h3>
+        <p class="text-xs text-gray-400 mt-1" id="authSubtitle">Enter your credentials to play and win</p>
+      </div>
+
+      <form id="authForm" class="space-y-3">
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Username</label>
+          <input type="text" id="authUsername" required class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
+        </div>
+        <div id="phoneGroup" class="hidden">
+          <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Mobile Phone (Optional)</label>
+          <input type="text" id="authPhone" class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Password</label>
+          <input type="password" id="authPassword" required class="w-full bg-darkest border border-card rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-red-600/30">
+          Sign In
+        </button>
+      </form>
+
+      <div class="mt-4 text-center text-xs text-gray-400">
+        <span id="authSwitchText">Don't have an account?</span>
+        <button onclick="toggleAuthMode()" class="text-red-400 font-bold ml-1 hover:underline" id="authSwitchBtn">Register (Get ₹1,000 Bonus)</button>
+      </div>
+      <div id="authError" class="mt-3 text-xs text-red-400 text-center hidden"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-card border border-red-500/30 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transform translate-y-20 opacity-0 transition duration-300">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+    <span id="toastMsg">Notification</span>
+  </div>
+
+  <script>
+    let userToken = localStorage.getItem("aviator_user_token");
+    let currentUser = null;
+    let authMode = "login"; // 'login' | 'register'
+    let socket = null;
+
+    // GAME RUNTIME STATE
+    let currentGameState = "BET"; // BET | PLAYING | GAMEEND
+    let currentMultiplier = 1.0;
+    let crashTarget = 2.0;
+    let flightStartTime = Date.now();
+    let currentBets = [];
+    let myBetsHistory = [];
+
+    // USER BET STATE
+    let betState_f = { betted: false, betAmount: 20, target: 2.0, auto: false };
+    let betState_s = { betted: false, betAmount: 50, target: 2.0, auto: false };
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      const toastIcon = document.getElementById("toastIcon");
+      toastMsg.innerText = msg;
+      toastIcon.className = isError ? "fa-solid fa-triangle-exclamation text-rose-500 text-base" : "fa-solid fa-circle-check text-emerald-400 text-base";
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => toast.classList.add("translate-y-20", "opacity-0"), 3000);
+    }
+
+    // INIT SOCKET & APP
+    window.addEventListener("DOMContentLoaded", () => {
+      initCanvas();
+      setupSocket();
+      checkUserAuth();
+    });
+
+    function setupSocket() {
+      socket = io();
+
+      socket.on("connect", () => {
+        socket.emit("enterRoom", { token: userToken });
+      });
+
+      socket.on("myInfo", (info) => {
+        if (currentUser) {
+          currentUser.balance = info.balance;
+        } else {
+          currentUser = { userName: info.userName, balance: info.balance };
+        }
+        document.getElementById("topBalance").innerText = Number(info.balance).toFixed(2);
+      });
+
+      socket.on("gameState", (state) => {
+        currentGameState = state.GameState;
+        if (currentGameState === "BET") {
+          currentMultiplier = 1.0;
+          document.getElementById("waitingOverlay").classList.remove("hidden");
+          document.getElementById("flewAwayOverlay").classList.add("hidden");
+          document.getElementById("liveMultiplierWrap").classList.add("hidden");
+          startWaitingCountdown(5000);
+          updateBetButtonState();
+        } else if (currentGameState === "PLAYING") {
+          flightStartTime = state.time;
+          document.getElementById("waitingOverlay").classList.add("hidden");
+          document.getElementById("flewAwayOverlay").classList.add("hidden");
+          document.getElementById("liveMultiplierWrap").classList.remove("hidden");
+          updateBetButtonState();
+        } else if (currentGameState === "GAMEEND") {
+          currentMultiplier = state.currentNum;
+          document.getElementById("waitingOverlay").classList.add("hidden");
+          document.getElementById("flewAwayOverlay").classList.remove("hidden");
+          document.getElementById("crashResultNumber").innerText = `${Number(state.currentNum).toFixed(2)}x`;
+          document.getElementById("liveMultiplierWrap").classList.add("hidden");
+          betState_f.betted = false;
+          betState_s.betted = false;
+          updateBetButtonState();
+        }
+      });
+
+      socket.on("history", (history) => {
+        renderHistoryChips(history);
+      });
+
+      socket.on("bettedUserInfo", (bettedUsers) => {
+        currentBets = bettedUsers || [];
+        renderAllBets(currentBets);
+      });
+
+      socket.on("finishGame", (user) => {
+        if (currentUser) {
+          currentUser.balance = user.balance;
+          document.getElementById("topBalance").innerText = Number(user.balance).toFixed(2);
+        }
+        betState_f.betted = false;
+        betState_s.betted = false;
+        updateBetButtonState();
+      });
+
+      socket.on("myBetState", (state) => {
+        if (state.f) betState_f.betted = state.f.betted;
+        if (state.s) betState_s.betted = state.s.betted;
+        updateBetButtonState();
+      });
+
+      socket.on("success", (msg) => {
+        showToast(msg);
+      });
+
+      socket.on("error", (err) => {
+        showToast(err.message, true);
+        if (err.index === "f") betState_f.betted = false;
+        if (err.index === "s") betState_s.betted = false;
+        updateBetButtonState();
+      });
+    }
+
+    // CANVAS ANIMATION (Aviator iconic flight curve)
+    let canvas, ctx;
+    let planeImg = new Image();
+    planeImg.src = "/avatars/av-12.png"; // Fallback or red plane icon
+
+    function initCanvas() {
+      canvas = document.getElementById("gameCanvas");
+      ctx = canvas.getContext("2d");
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw subtle grid
+      drawGrid();
+
+      if (currentGameState === "PLAYING") {
+        const elapsedSec = (Date.now() - flightStartTime) / 1000;
+        const t = 0.06 * elapsedSec;
+        const t2 = 0.04 * elapsedSec;
+        currentMultiplier = 1 + t + Math.pow(t, 2) - Math.pow(t2, 3) + Math.pow(t2, 4);
+        if (currentMultiplier < 1.0) currentMultiplier = 1.0;
+
+        document.getElementById("centerMultiplierText").innerText = `${currentMultiplier.toFixed(2)}x`;
+
+        // Draw iconic red trajectory curve
+        drawFlightCurve(elapsedSec);
+
+        // Update Cash Out button amounts live!
+        updateLiveCashoutAmounts();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+      ctx.lineWidth = 1;
+      const step = 40;
+      for (let x = 0; x < canvas.width; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawFlightCurve(elapsedSec) {
+      const progress = Math.min(1.0, elapsedSec / 10.0);
+      const startX = 20;
+      const startY = canvas.height - 20;
+      const targetX = startX + (canvas.width - 80) * Math.min(0.9, 0.2 + progress * 0.7);
+      const targetY = startY - (canvas.height - 80) * Math.min(0.85, 0.1 + progress * 0.75);
+
+      // Curve path
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      const cpX = startX + (targetX - startX) * 0.5;
+      const cpY = startY;
+      ctx.quadraticCurveTo(cpX, cpY, targetX, targetY);
+
+      // Gradient under curve
+      const grad = ctx.createLinearGradient(0, targetY, 0, startY);
+      grad.addColorStop(0, "rgba(239, 68, 68, 0.35)");
+      grad.addColorStop(1, "rgba(239, 68, 68, 0.0)");
+
+      ctx.lineTo(targetX, startY);
+      ctx.lineTo(startX, startY);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Stroke line
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.quadraticCurveTo(cpX, cpY, targetX, targetY);
+      ctx.strokeStyle = "#ef4444";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Draw Plane (Red Aeroplane)
+      ctx.save();
+      ctx.translate(targetX, targetY);
+      ctx.rotate(-0.25);
+      ctx.fillStyle = "#ef4444";
+      // Draw sleek plane shape
+      ctx.beginPath();
+      ctx.moveTo(15, 0);
+      ctx.lineTo(-15, -8);
+      ctx.lineTo(-10, 0);
+      ctx.lineTo(-15, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function startWaitingCountdown(durationMs) {
+      const bar = document.getElementById("waitingBar");
+      bar.style.width = "100%";
+      const start = Date.now();
+      const interval = setInterval(() => {
+        const left = Math.max(0, durationMs - (Date.now() - start));
+        const pct = (left / durationMs) * 100;
+        bar.style.width = `${pct}%`;
+        if (left <= 0) clearInterval(interval);
+      }, 50);
+    }
+
+    // BETTING LOGIC
+    function adjustBet(index, diff) {
+      const input = document.getElementById(`betAmount_${index}`);
+      let val = Number(input.value) + diff;
+      if (val < 10) val = 10;
+      if (val > 10000) val = 10000;
+      input.value = val;
+      updateBetButtonState();
+    }
+
+    function setBetAmount(index, amount) {
+      document.getElementById(`betAmount_${index}`).value = amount;
+      updateBetButtonState();
+    }
+
+    function handleBetClick(index) {
+      const state = index === "f" ? betState_f : betState_s;
+      const amount = Number(document.getElementById(`betAmount_${index}`).value);
+
+      if (currentGameState === "BET") {
+        if (!state.betted) {
+          // PLACE BET
+          const auto = document.getElementById(index === "f" ? "autoCashout1" : "autoCashout2").checked;
+          const target = Number(document.getElementById(index === "f" ? "autoTarget1" : "autoTarget2").value);
+
+          socket.emit("playBet", {
+            betAmount: amount,
+            target: auto ? target : 2.0,
+            type: index,
+            auto: auto,
+          });
+
+          state.betted = true;
+          state.betAmount = amount;
+          state.target = target;
+          updateBetButtonState();
+        } else {
+          // CANCEL BET BEFORE ROUND STARTS
+          state.betted = false;
+          updateBetButtonState();
+        }
+      } else if (currentGameState === "PLAYING" && state.betted) {
+        // CASHOUT NOW!
+        socket.emit("cashOut", {
+          type: index,
+          endTarget: currentMultiplier,
+        });
+        state.betted = false;
+        updateBetButtonState();
+      }
+    }
+
+    function updateBetButtonState() {
+      ["f", "s"].forEach((index) => {
+        const btn = document.getElementById(`btnAction_${index}`);
+        const text = document.getElementById(`btnText_${index}`);
+        const sub = document.getElementById(`btnSub_${index}`);
+        const state = index === "f" ? betState_f : betState_s;
+        const amount = Number(document.getElementById(`betAmount_${index}`).value);
+
+        if (currentGameState === "BET") {
+          if (!state.betted) {
+            btn.className = "flex-1 rounded-2xl btn-bet text-white font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition active:scale-95";
+            text.innerText = "BET";
+            sub.innerText = `₹${amount.toFixed(2)}`;
+          } else {
+            btn.className = "flex-1 rounded-2xl bg-rose-600 text-white font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition active:scale-95";
+            text.innerText = "WAITING";
+            sub.innerText = "Cancel Bet";
+          }
+        } else if (currentGameState === "PLAYING") {
+          if (state.betted) {
+            btn.className = "flex-1 rounded-2xl btn-cashout text-black font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition active:scale-95";
+            text.innerText = "CASH OUT";
+            sub.innerText = `₹${(amount * currentMultiplier).toFixed(2)}`;
+          } else {
+            btn.className = "flex-1 rounded-2xl btn-waiting text-gray-400 font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition";
+            text.innerText = "WAITING";
+            sub.innerText = "Next Round";
+          }
+        } else {
+          btn.className = "flex-1 rounded-2xl btn-waiting text-gray-400 font-racing font-black text-xl uppercase tracking-wider flex flex-col items-center justify-center p-2 shadow-lg transition";
+          text.innerText = "FLEW AWAY";
+          sub.innerText = "--";
+        }
+      });
+    }
+
+    function updateLiveCashoutAmounts() {
+      ["f", "s"].forEach((index) => {
+        const state = index === "f" ? betState_f : betState_s;
+        if (state.betted && currentGameState === "PLAYING") {
+          const sub = document.getElementById(`btnSub_${index}`);
+          const amount = Number(document.getElementById(`betAmount_${index}`).value);
+          sub.innerText = `₹${(amount * currentMultiplier).toFixed(2)}`;
+        }
+      });
+    }
+
+    // HISTORY CHIPS BAR
+    function renderHistoryChips(history) {
+      const container = document.getElementById("historyChips");
+      if (!history || history.length === 0) return;
+      container.innerHTML = history.slice(0, 20).map((num) => {
+        const val = Number(num);
+        let chipClass = "chip-blue";
+        if (val >= 2 && val < 10) chipClass = "chip-purple";
+        if (val >= 10) chipClass = "chip-big";
+        return `<span class="payout-chip ${chipClass}">${val.toFixed(2)}x</span>`;
+      }).join("");
+    }
+
+    // ALL BETS TAB
+    function renderAllBets(bets) {
+      const container = document.getElementById("allBetsContainer");
+      document.getElementById("allBetsCount").innerText = bets.length;
+      if (!bets || bets.length === 0) {
+        container.innerHTML = `<div class="text-center text-xs text-gray-500 py-6">Waiting for bets...</div>`;
+        return;
+      }
+      container.innerHTML = bets.map((b) => `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-darkest border border-[#1e232d] text-xs">
+          <div class="flex items-center gap-2">
+            <img src="${b.img || './avatars/av-5.png'}" class="w-6 h-6 rounded-full border border-card" alt="avatar">
+            <span class="font-bold text-gray-300">${b.name}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="font-bold text-white">₹${Number(b.betAmount).toFixed(2)}</span>
+            ${b.cashouted ? `
+              <span class="payout-chip ${Number(b.target) < 2 ? 'chip-blue' : 'chip-purple'}">${Number(b.target).toFixed(2)}x</span>
+              <span class="font-bold text-emerald-400">₹${Number(b.cashOut).toFixed(2)}</span>
+            ` : `
+              <span class="text-gray-500 text-[10px]">Flying</span>
+            `}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function switchSidebarTab(tab) {
+      if (tab === "all") {
+        document.getElementById("tabAllBetsBtn").className = "py-2 rounded-lg bg-card text-white text-center";
+        document.getElementById("tabMyBetsBtn").className = "py-2 rounded-lg text-gray-400 hover:text-white text-center";
+        document.getElementById("allBetsContainer").classList.remove("hidden");
+        document.getElementById("myBetsContainer").classList.add("hidden");
+      } else {
+        document.getElementById("tabMyBetsBtn").className = "py-2 rounded-lg bg-card text-white text-center";
+        document.getElementById("tabAllBetsBtn").className = "py-2 rounded-lg text-gray-400 hover:text-white text-center";
+        document.getElementById("myBetsContainer").classList.remove("hidden");
+        document.getElementById("allBetsContainer").classList.add("hidden");
+        loadMyBets();
+      }
+    }
+
+    async function loadMyBets() {
+      if (!currentUser) return;
+      try {
+        const res = await fetch("/api/my-info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: currentUser.userName }),
+        });
+        const data = await res.json();
+        if (data.status) {
+          const container = document.getElementById("myBetsContainer");
+          const list = data.data || [];
+          if (list.length === 0) {
+            container.innerHTML = `<div class="text-center text-xs text-gray-500 py-6">No bets placed yet.</div>`;
+            return;
+          }
+          container.innerHTML = list.map((b) => `
+            <div class="flex items-center justify-between p-2 rounded-xl bg-darkest border border-[#1e232d] text-xs">
+              <span class="text-gray-400 font-semibold">Bet: ₹${Number(b.betAmount).toFixed(2)}</span>
+              ${b.cashouted ? `
+                <span class="text-emerald-400 font-bold">Won: ₹${(b.betAmount * b.cashoutAt).toFixed(2)} (${b.cashoutAt.toFixed(2)}x)</span>
+              ` : `
+                <span class="text-rose-500 font-bold">Crashed</span>
+              `}
+            </div>
+          `).join("");
+        }
+      } catch (e) {}
+    }
+
+    // USER AUTH
+    async function checkUserAuth() {
+      if (!userToken) {
+        renderGuestHeader();
+        return;
+      }
+      try {
+        const res = await fetch("/api/me", {
+          headers: { Authorization: `Bearer ${userToken}` }
+        });
+        const data = await res.json();
+        if (data.status) {
+          currentUser = data.user;
+          renderLoggedInHeader(currentUser);
+        } else {
+          localStorage.removeItem("aviator_user_token");
+          userToken = null;
+          renderGuestHeader();
+        }
+      } catch (e) {
+        renderGuestHeader();
+      }
+    }
+
+    function renderLoggedInHeader(user) {
+      document.getElementById("topBalance").innerText = Number(user.balance).toFixed(2);
+      document.getElementById("authArea").innerHTML = `
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-slate-800 text-gray-200 flex items-center justify-center text-xs font-bold border border-slate-700">
+            ${user.userName.charAt(0).toUpperCase()}
+          </div>
+          <span class="text-xs font-bold text-white hidden sm:inline">${user.userName}</span>
+          <button onclick="logoutUser()" class="text-gray-400 hover:text-rose-400 text-sm ml-1" title="Sign Out">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderGuestHeader() {
+      document.getElementById("authArea").innerHTML = `
+        <button onclick="openAuthModal('login')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full transition shadow-md shadow-red-600/30">
+          Sign In
+        </button>
+      `;
+    }
+
+    function logoutUser() {
+      localStorage.removeItem("aviator_user_token");
+      userToken = null;
+      currentUser = null;
+      location.reload();
+    }
+
+    // AUTH MODAL
+    function openAuthModal(mode) {
+      authMode = mode;
+      updateAuthModalUI();
+      document.getElementById("authModal").classList.remove("hidden");
+    }
+
+    function closeAuthModal() {
+      document.getElementById("authModal").classList.add("hidden");
+    }
+
+    function toggleAuthMode() {
+      authMode = authMode === "login" ? "register" : "login";
+      updateAuthModalUI();
+    }
+
+    function updateAuthModalUI() {
+      const isReg = authMode === "register";
+      document.getElementById("authTitle").innerText = isReg ? "CREATE ACCOUNT" : "PLAYER LOGIN";
+      document.getElementById("authSubtitle").innerText = isReg ? "Get ₹1,000 Free Welcome Bonus on signup" : "Enter your credentials to play and win";
+      document.getElementById("phoneGroup").className = isReg ? "block" : "hidden";
+      document.getElementById("authSubmitBtn").innerText = isReg ? "Register & Claim ₹1,000" : "Sign In";
+      document.getElementById("authSwitchText").innerText = isReg ? "Already have an account?" : "Don't have an account?";
+      document.getElementById("authSwitchBtn").innerText = isReg ? "Sign In" : "Register (Get ₹1,000 Bonus)";
+      document.getElementById("authError").classList.add("hidden");
+    }
+
+    document.getElementById("authForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userName = document.getElementById("authUsername").value.trim();
+      const password = document.getElementById("authPassword").value.trim();
+      const phone = document.getElementById("authPhone").value.trim();
+      const errBox = document.getElementById("authError");
+
+      const endpoint = authMode === "register" ? "/api/register" : "/api/login";
+      const payload = authMode === "register" ? { userName, password, phone } : { userName, password };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status) {
+          userToken = data.token;
+          localStorage.setItem("aviator_user_token", userToken);
+          currentUser = data.user;
+          closeAuthModal();
+          renderLoggedInHeader(currentUser);
+          showToast(data.message);
+          if (socket) socket.emit("enterRoom", { token: userToken });
+        } else {
+          errBox.innerText = data.message || "Failed";
+          errBox.classList.remove("hidden");
+        }
+      } catch (err) {
+        errBox.innerText = "Server connection error";
+        errBox.classList.remove("hidden");
+      }
+    });
+
+    // DEPOSIT MODAL
+    function openDepositModal() {
+      if (!userToken) {
+        openAuthModal("register");
+        return;
+      }
+      document.getElementById("depositModal").classList.remove("hidden");
+    }
+
+    function closeDepositModal() {
+      document.getElementById("depositModal").classList.add("hidden");
+    }
+
+    function setDepositAmount(amt) {
+      document.getElementById("depositAmount").value = amt;
+    }
+
+    document.getElementById("depositForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amount = document.getElementById("depositAmount").value;
+      const utr = document.getElementById("depositUtr").value;
+
+      try {
+        const res = await fetch("/api/deposit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${userToken}` },
+          body: JSON.stringify({ amount, utr })
+        });
+        const data = await res.json();
+        showToast(data.message, !data.status);
+        if (data.status) closeDepositModal();
+      } catch (err) {
+        showToast("Error submitting deposit", true);
+      }
+    });
+
+    async function instantDemoDeposit() {
+      try {
+        const res = await fetch("/api/deposit-instant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${userToken}` },
+          body: JSON.stringify({ amount: 1000 })
+        });
+        const data = await res.json();
+        if (data.status) {
+          showToast(data.message);
+          closeDepositModal();
+          document.getElementById("topBalance").innerText = Number(data.balance).toFixed(2);
+        }
+      } catch (e) {
+        showToast("Error adding demo balance", true);
+      }
+    }
+
+    // WITHDRAW MODAL
+    function openWithdrawModal() {
+      if (!userToken) {
+        openAuthModal("login");
+        return;
+      }
+      document.getElementById("withdrawModal").classList.remove("hidden");
+    }
+
+    function closeWithdrawModal() {
+      document.getElementById("withdrawModal").classList.add("hidden");
+    }
+
+    document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amount = document.getElementById("withdrawAmount").value;
+      const upiId = document.getElementById("withdrawUpiId").value;
+      const accountName = document.getElementById("withdrawName").value;
+
+      try {
+        const res = await fetch("/api/withdraw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${userToken}` },
+          body: JSON.stringify({ amount, upiId, accountName })
+        });
+        const data = await res.json();
+        showToast(data.message, !data.status);
+        if (data.status) {
+          closeWithdrawModal();
+          document.getElementById("topBalance").innerText = Number(data.balance).toFixed(2);
+        }
+      } catch (e) {
+        showToast("Error requesting withdrawal", true);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "id_1793475173134_h129ly",
+    "roundNumber": 19,
+    "userId": "user_demo_1",
+    "userName": "player1",
+    "type": "f",
+    "betAmount": 20,
+    "target": 2,
+    "status": "cashed_out",
+    "date": 1793475173134,
+    "_id": "id_1793475173134_h129ly",
+    "cashOut": 28.2,
+    "cashoutMultiplier": 1.41,
+    "updatedAt": "2026-10-31T19:33:01.813Z"
+  },
+  {
+    "id": "id_1793475663238_lffn7a",
+    "roundNumber": 41,
+    "userId": "user_demo_1",
+    "userName": "player1",
+    "type": "f",
+    "betAmount": 20,
+    "target": 2,
+    "status": "cashed_out",
+    "date": 1793475663238,
+    "_id": "id_1793475663238_lffn7a",
+    "cashOut": 24,
+    "cashoutMultiplier": 1.2,
+    "updatedAt": "2026-10-31T19:41:07.277Z"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "settings",
+    "minBet": 10,
+    "maxBet": 10000,
+    "houseEdge": 4,
+    "nextCrashTarget": null,
+    "botEnabled": true,
+    "botCount": 20,
+    "upiId": "aviatoradmin@ybl",
+    "upiName": "Aviator Official Pay",
+    "qrImageUrl": "/assets/upi-qr.png",
+    "maintenance": false,
+    "updatedAt": "2026-10-31T19:44:19.287Z"
+  }
+]

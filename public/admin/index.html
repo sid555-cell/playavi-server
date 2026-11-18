@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aviator Master Admin Panel | Game Control & User Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #0d0f12; color: #e1e7ec; }
+    .font-racing { font-family: 'Rajdhani', sans-serif; }
+    .bg-card { background-color: #14171d; border: 1px solid #232732; }
+    .bg-darker { background-color: #0a0c0e; }
+    .red-glow { text-shadow: 0 0 15px rgba(225, 29, 72, 0.6); }
+    .border-card { border-color: #232732; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #0d0f12; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #2a2e3d; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scroll">
+
+  <!-- LOGIN OVERLAY (Shows if not logged in) -->
+  <div id="loginOverlay" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+    <div class="bg-card w-full max-w-md p-8 rounded-2xl shadow-2xl border border-red-500/20">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-600/10 text-red-500 text-3xl mb-3">
+          <i class="fa-solid fa-plane-up"></i>
+        </div>
+        <h2 class="text-2xl font-bold font-racing tracking-wider text-white">AVIATOR CONTROL ADMIN</h2>
+        <p class="text-xs text-gray-400 mt-1">Authorized personnel only</p>
+      </div>
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Admin Username</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3 top-3 text-gray-500 text-sm"></i>
+            <input type="text" id="adminUser" value="admin" required class="w-full bg-darker border border-card rounded-lg pl-10 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-gray-500 text-sm"></i>
+            <input type="password" id="adminPass" value="admin123" required class="w-full bg-darker border border-card rounded-lg pl-10 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg text-sm tracking-wider uppercase transition shadow-lg shadow-red-600/30">
+          Sign In to Dashboard
+        </button>
+      </form>
+      <div id="loginError" class="mt-4 text-xs text-red-400 text-center hidden"></div>
+    </div>
+  </div>
+
+  <!-- MAIN APP (Hidden until login) -->
+  <div id="appContainer" class="hidden flex-1 flex flex-col">
+    <!-- TOP NAVIGATION -->
+    <header class="bg-card border-b border-card sticky top-0 z-40 px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30">
+          <i class="fa-solid fa-plane-up text-lg"></i>
+        </div>
+        <div>
+          <div class="font-racing text-xl font-bold tracking-wider flex items-center gap-2">
+            AVIATOR <span class="text-red-500 text-xs px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30">MASTER ADMIN</span>
+          </div>
+          <div class="text-xs text-gray-400 flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Server Live &bull; Socket.IO Active
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center gap-2 bg-darker px-3 py-1.5 rounded-lg border border-card text-xs">
+          <i class="fa-solid fa-shield-halved text-red-500"></i>
+          <span class="text-gray-300 font-semibold" id="topAdminName">Admin</span>
+        </div>
+        <a href="/portal" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-xs text-white px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-gamepad text-amber-400"></i>
+          Open Player Lobby
+        </a>
+        <button onclick="logoutAdmin()" class="text-gray-400 hover:text-red-400 text-sm p-1.5 rounded-lg hover:bg-red-500/10 transition" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT BODY -->
+    <div class="flex-1 flex overflow-hidden">
+      <!-- SIDEBAR TABS -->
+      <aside class="w-64 bg-card border-r border-card flex flex-col justify-between p-4 flex-shrink-0">
+        <nav class="space-y-1.5">
+          <button onclick="switchTab('controller')" id="nav-controller" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-white bg-red-600">
+            <i class="fa-solid fa-gamepad text-lg w-5 text-center"></i>
+            <span>Crash Controller</span>
+            <span class="ml-auto text-[10px] bg-white/20 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Live</span>
+          </button>
+          <button onclick="switchTab('overview')" id="nav-overview" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-gray-400 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-chart-pie text-lg w-5 text-center"></i>
+            <span>Dashboard & Profit</span>
+          </button>
+          <button onclick="switchTab('users')" id="nav-users" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-gray-400 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-users text-lg w-5 text-center"></i>
+            <span>Users & Balances</span>
+          </button>
+          <button onclick="switchTab('deposits')" id="nav-deposits" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-gray-400 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-wallet text-lg w-5 text-center"></i>
+            <span>Deposits (UPI)</span>
+            <span id="badge-deposits" class="ml-auto text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">0</span>
+          </button>
+          <button onclick="switchTab('withdrawals')" id="nav-withdrawals" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-gray-400 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-money-bill-transfer text-lg w-5 text-center"></i>
+            <span>Withdrawals</span>
+            <span id="badge-withdrawals" class="ml-auto text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-bold">0</span>
+          </button>
+          <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-gray-400 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-sliders text-lg w-5 text-center"></i>
+            <span>Game & Bot Settings</span>
+          </button>
+          <button onclick="switchTab('rounds')" id="nav-rounds" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-gray-400 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-clock-rotate-left text-lg w-5 text-center"></i>
+            <span>Rounds History</span>
+          </button>
+        </nav>
+
+        <div class="p-3 bg-darker rounded-xl border border-card">
+          <div class="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-1">Next Crash Status</div>
+          <div id="sidebarForcedStatus" class="text-sm font-bold text-emerald-400">Auto (RTP 96%)</div>
+        </div>
+      </aside>
+
+      <!-- MAIN TAB CONTENT AREA -->
+      <main class="flex-1 overflow-y-auto p-6 custom-scroll">
+
+        <!-- TAB 1: CRASH CONTROLLER -->
+        <section id="tab-controller" class="space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- LIVE FLIGHT MONITOR -->
+            <div class="lg:col-span-2 bg-card rounded-2xl p-6 border border-card flex flex-col justify-between relative overflow-hidden">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span id="liveStateBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    WAITING
+                  </span>
+                  <span class="text-xs text-gray-400">Round #<span id="liveRoundNumber">1</span></span>
+                </div>
+                <div class="text-xs text-gray-400">
+                  Target Crash: <span id="liveTargetDisplay" class="font-bold text-white">--</span>
+                </div>
+              </div>
+
+              <!-- BIG MULTIPLIER DISPLAY -->
+              <div class="my-10 text-center">
+                <div class="text-6xl md:text-8xl font-black font-racing tracking-tight text-white red-glow" id="liveMultiplierText">
+                  1.00x
+                </div>
+                <div id="liveSubText" class="text-sm font-semibold tracking-widest uppercase text-gray-400 mt-2">
+                  Waiting for bets...
+                </div>
+              </div>
+
+              <!-- ACTIVE ROUND STATS BAR -->
+              <div class="grid grid-cols-3 gap-4 pt-4 border-t border-card/80 text-center">
+                <div>
+                  <div class="text-[11px] text-gray-400 uppercase">Active Bets</div>
+                  <div class="text-lg font-bold text-white" id="liveActiveBetsCount">0</div>
+                </div>
+                <div>
+                  <div class="text-[11px] text-gray-400 uppercase">Bets Volume</div>
+                  <div class="text-lg font-bold text-white">₹<span id="liveActiveVolume">0</span></div>
+                </div>
+                <div>
+                  <div class="text-[11px] text-gray-400 uppercase">Total Cashed Out</div>
+                  <div class="text-lg font-bold text-emerald-400">₹<span id="liveActivePayout">0</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONTROLLER / FORCED MULTIPLIER BOX -->
+            <div class="bg-card rounded-2xl p-6 border border-card flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-racing text-lg font-bold uppercase text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-red-500"></i> Next Crash Controller
+                  </h3>
+                  <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                    Manual Override
+                  </span>
+                </div>
+
+                <p class="text-xs text-gray-400 mb-4">
+                  Set the exact multiplier point where the next plane will crash. Leave empty to let the fair RTP algorithm decide automatically.
+                </p>
+
+                <!-- INPUT -->
+                <div class="mb-4">
+                  <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Target Crash Multiplier</label>
+                  <div class="flex gap-2">
+                    <div class="relative flex-1">
+                      <input type="number" step="0.01" min="1.0" id="forceTargetInput" placeholder="e.g. 1.50 or 10.00" class="w-full bg-darker border border-card rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:border-red-500">
+                      <span class="absolute right-3 top-3.5 text-gray-500 font-bold">x</span>
+                    </div>
+                    <button onclick="applyForcedCrash()" class="bg-red-600 hover:bg-red-500 text-white font-bold px-5 rounded-xl text-sm transition shadow-lg shadow-red-600/30">
+                      LOCK
+                    </button>
+                  </div>
+                </div>
+
+                <!-- PRESET BUTTONS -->
+                <div class="mb-5">
+                  <label class="block text-[11px] font-semibold text-gray-400 uppercase mb-2">Quick Presets</label>
+                  <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setQuickForce(1.10)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">1.10x</button>
+                    <button onclick="setQuickForce(1.35)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">1.35x</button>
+                    <button onclick="setQuickForce(1.80)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">1.80x</button>
+                    <button onclick="setQuickForce(2.00)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">2.00x</button>
+                    <button onclick="setQuickForce(3.00)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">3.00x</button>
+                    <button onclick="setQuickForce(5.00)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">5.00x</button>
+                    <button onclick="setQuickForce(10.0)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">10.0x</button>
+                    <button onclick="setQuickForce(50.0)" class="bg-darker hover:bg-red-600/20 hover:border-red-500 border border-card py-2 rounded-lg text-xs font-bold text-gray-200 transition">50.0x</button>
+                  </div>
+                </div>
+
+                <!-- RESET BUTTON -->
+                <button onclick="resetForcedCrash()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-gray-300 py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                  Reset to Auto Random (Fair RTP)
+                </button>
+              </div>
+
+              <!-- CURRENT LOCK STATUS -->
+              <div class="mt-4 p-3 bg-darker rounded-xl border border-card text-center">
+                <span class="text-xs text-gray-400">Current Next Round Plan:</span>
+                <div id="activeLockDisplay" class="text-sm font-bold text-emerald-400 mt-0.5">Automatic Random Mode</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ACTIVE BETS FEED -->
+          <div class="bg-card rounded-2xl p-6 border border-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-racing text-lg font-bold uppercase text-white flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-red-500"></i> Active Round Bets (<span id="activeBetsTableCount">0</span>)
+              </h3>
+              <span class="text-xs text-gray-400">Real-time player and bot actions</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-300">
+                <thead class="bg-darker text-[11px] uppercase tracking-wider text-gray-400 border-b border-card">
+                  <tr>
+                    <th class="py-3 px-4">Player</th>
+                    <th class="py-3 px-4">Type</th>
+                    <th class="py-3 px-4">Bet Amount</th>
+                    <th class="py-3 px-4">Auto Cashout</th>
+                    <th class="py-3 px-4">Result Multiplier</th>
+                    <th class="py-3 px-4">Payout</th>
+                    <th class="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="activeBetsTbody" class="divide-y divide-card font-medium">
+                  <tr>
+                    <td colspan="7" class="py-6 text-center text-gray-500 text-xs">Waiting for bets...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: OVERVIEW / DASHBOARD -->
+        <section id="tab-overview" class="hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- CARD 1 -->
+            <div class="bg-card p-5 rounded-2xl border border-card">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs uppercase font-semibold text-gray-400">Total Players</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                  <i class="fa-solid fa-users"></i>
+                </div>
+              </div>
+              <div class="text-3xl font-bold font-racing text-white" id="statTotalUsers">0</div>
+              <div class="text-xs text-gray-400 mt-1">Registered real accounts</div>
+            </div>
+
+            <!-- CARD 2 -->
+            <div class="bg-card p-5 rounded-2xl border border-card">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs uppercase font-semibold text-gray-400">Platform Net Profit</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                  <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+              </div>
+              <div class="text-3xl font-bold font-racing text-emerald-400" id="statTotalProfit">₹0.00</div>
+              <div class="text-xs text-gray-400 mt-1">Total revenue minus payouts</div>
+            </div>
+
+            <!-- CARD 3 -->
+            <div class="bg-card p-5 rounded-2xl border border-card">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs uppercase font-semibold text-gray-400">Total Bets Volume</span>
+                <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                  <i class="fa-solid fa-receipt"></i>
+                </div>
+              </div>
+              <div class="text-3xl font-bold font-racing text-white" id="statBetsVolume">₹0.00</div>
+              <div class="text-xs text-gray-400 mt-1">All-time turnover</div>
+            </div>
+
+            <!-- CARD 4 -->
+            <div class="bg-card p-5 rounded-2xl border border-card">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs uppercase font-semibold text-gray-400">User Wallets Liability</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                  <i class="fa-solid fa-wallet"></i>
+                </div>
+              </div>
+              <div class="text-3xl font-bold font-racing text-white" id="statUserBalance">₹0.00</div>
+              <div class="text-xs text-gray-400 mt-1">Pending user account balances</div>
+            </div>
+          </div>
+
+          <!-- QUICK ACTIONS & STATS -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-card p-6 rounded-2xl border border-card">
+              <h3 class="font-racing text-lg font-bold text-white mb-4">Pending Financial Actions</h3>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between p-3.5 bg-darker rounded-xl border border-card">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
+                      <i class="fa-solid fa-arrow-down"></i>
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-white">Pending UPI Deposits</div>
+                      <div class="text-xs text-gray-400">Awaiting UTR payment approval</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span id="statPendingDeposits" class="text-base font-bold text-amber-400">0</span>
+                    <button onclick="switchTab('deposits')" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 text-gray-200">View</button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-3.5 bg-darker rounded-xl border border-card">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center text-sm">
+                      <i class="fa-solid fa-arrow-up"></i>
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-white">Pending Withdrawals</div>
+                      <div class="text-xs text-gray-400">Awaiting UPI transfer payout</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span id="statPendingWithdrawals" class="text-base font-bold text-red-400">0</span>
+                    <button onclick="switchTab('withdrawals')" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 text-gray-200">View</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-card p-6 rounded-2xl border border-card">
+              <h3 class="font-racing text-lg font-bold text-white mb-4">System Information</h3>
+              <div class="space-y-2.5 text-xs">
+                <div class="flex justify-between py-2 border-b border-card">
+                  <span class="text-gray-400">Server Status</span>
+                  <span class="font-bold text-emerald-400">ONLINE (Port 5000)</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-card">
+                  <span class="text-gray-400">Engine Type</span>
+                  <span class="font-bold text-white">Real-Time Socket.IO Aviator Loop</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-card">
+                  <span class="text-gray-400">Total Completed Rounds</span>
+                  <span class="font-bold text-white" id="statTotalRounds">0</span>
+                </div>
+                <div class="flex justify-between py-2">
+                  <span class="text-gray-400">Database Engine</span>
+                  <span class="font-bold text-white">JSON File Store (Zero-Config Auto-Save)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: USERS & BALANCES -->
+        <section id="tab-users" class="hidden space-y-6">
+          <div class="bg-card rounded-2xl p-6 border border-card">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="font-racing text-xl font-bold uppercase text-white">User Accounts & Wallets</h3>
+                <p class="text-xs text-gray-400">Manage registered players, edit balances, or block accounts</p>
+              </div>
+              <div class="flex gap-2">
+                <input type="text" id="userSearchInput" onkeyup="filterUsersTable()" placeholder="Search username or phone..." class="bg-darker border border-card rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-red-500 w-64">
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-300">
+                <thead class="bg-darker text-[11px] uppercase tracking-wider text-gray-400 border-b border-card">
+                  <tr>
+                    <th class="py-3 px-4">Username</th>
+                    <th class="py-3 px-4">Phone</th>
+                    <th class="py-3 px-4">Role</th>
+                    <th class="py-3 px-4">Wallet Balance</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4">Joined</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTbody" class="divide-y divide-card">
+                  <tr>
+                    <td colspan="7" class="py-6 text-center text-gray-500">Loading users...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: DEPOSITS -->
+        <section id="tab-deposits" class="hidden space-y-6">
+          <div class="bg-card rounded-2xl p-6 border border-card">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="font-racing text-xl font-bold uppercase text-white">UPI Deposit Requests</h3>
+                <p class="text-xs text-gray-400">Approve or reject player payment requests</p>
+              </div>
+              <button onclick="loadDeposits()" class="bg-darker border border-card text-xs text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/5">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-300">
+                <thead class="bg-darker text-[11px] uppercase tracking-wider text-gray-400 border-b border-card">
+                  <tr>
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Player</th>
+                    <th class="py-3 px-4">Amount (INR)</th>
+                    <th class="py-3 px-4">UTR / Ref No.</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="depositsTbody" class="divide-y divide-card">
+                  <tr>
+                    <td colspan="6" class="py-6 text-center text-gray-500">No deposit requests yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: WITHDRAWALS -->
+        <section id="tab-withdrawals" class="hidden space-y-6">
+          <div class="bg-card rounded-2xl p-6 border border-card">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="font-racing text-xl font-bold uppercase text-white">Player Withdrawals</h3>
+                <p class="text-xs text-gray-400">Review UPI payout requests and mark as paid</p>
+              </div>
+              <button onclick="loadWithdrawals()" class="bg-darker border border-card text-xs text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/5">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-300">
+                <thead class="bg-darker text-[11px] uppercase tracking-wider text-gray-400 border-b border-card">
+                  <tr>
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Player</th>
+                    <th class="py-3 px-4">Amount (INR)</th>
+                    <th class="py-3 px-4">UPI ID</th>
+                    <th class="py-3 px-4">Account Name</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="withdrawalsTbody" class="divide-y divide-card">
+                  <tr>
+                    <td colspan="7" class="py-6 text-center text-gray-500">No withdrawal requests yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 6: SETTINGS -->
+        <section id="tab-settings" class="hidden space-y-6">
+          <div class="bg-card rounded-2xl p-6 border border-card max-w-3xl">
+            <h3 class="font-racing text-xl font-bold uppercase text-white mb-6">Aviator Game & Platform Settings</h3>
+            <form id="settingsForm" class="space-y-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Minimum Bet (INR)</label>
+                  <input type="number" id="settingMinBet" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Maximum Bet (INR)</label>
+                  <input type="number" id="settingMaxBet" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">House Edge % (Casino Advantage)</label>
+                  <input type="number" id="settingHouseEdge" min="1" max="25" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                  <span class="text-[11px] text-gray-500">Standard is 4% (96% RTP). Higher value means more frequent low crashes.</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Simulated Live Bots Count</label>
+                  <input type="number" id="settingBotCount" min="0" max="50" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                  <span class="text-[11px] text-gray-500">Number of automatic players placing realistic bets</span>
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-card">
+                <h4 class="text-sm font-bold text-white mb-3">Deposit Payment UPI Information</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Admin UPI ID</label>
+                    <input type="text" id="settingUpiId" placeholder="e.g. paytmqr...@paytm" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">UPI Payee Display Name</label>
+                    <input type="text" id="settingUpiName" placeholder="e.g. Aviator Games Official" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-4">
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition shadow-lg shadow-red-600/30">
+                  Save Platform Settings
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- TAB 7: ROUND HISTORY -->
+        <section id="tab-rounds" class="hidden space-y-6">
+          <div class="bg-card rounded-2xl p-6 border border-card">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="font-racing text-xl font-bold uppercase text-white">Past Rounds Log</h3>
+                <p class="text-xs text-gray-400">All recent crash multipliers and round profit outcomes</p>
+              </div>
+              <button onclick="loadRounds()" class="bg-darker border border-card text-xs text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/5">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-300">
+                <thead class="bg-darker text-[11px] uppercase tracking-wider text-gray-400 border-b border-card">
+                  <tr>
+                    <th class="py-3 px-4">Round #</th>
+                    <th class="py-3 px-4">Crash Multiplier</th>
+                    <th class="py-3 px-4">Mode</th>
+                    <th class="py-3 px-4">Total Bets</th>
+                    <th class="py-3 px-4">Bet Volume</th>
+                    <th class="py-3 px-4">Payout</th>
+                    <th class="py-3 px-4">Casino Profit</th>
+                  </tr>
+                </thead>
+                <tbody id="roundsTbody" class="divide-y divide-card">
+                  <tr>
+                    <td colspan="7" class="py-6 text-center text-gray-500">Loading rounds history...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ADJUST BALANCE MODAL -->
+  <div id="balanceModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-card w-full max-w-md p-6 rounded-2xl border border-card shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="font-racing text-lg font-bold text-white">Edit User Balance</h4>
+        <button onclick="closeBalanceModal()" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+      <div class="text-xs text-gray-400 mb-4">
+        User: <span id="modalUsername" class="font-bold text-white">--</span> | Current: ₹<span id="modalCurrentBalance" class="text-emerald-400 font-bold">0</span>
+      </div>
+      <form id="balanceForm" class="space-y-4">
+        <input type="hidden" id="modalUserId">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Action</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center justify-center gap-2 bg-darker p-2.5 rounded-xl border border-card cursor-pointer">
+              <input type="radio" name="balAction" value="add" checked class="text-red-500">
+              <span class="text-xs font-bold text-emerald-400">+ Add Money</span>
+            </label>
+            <label class="flex items-center justify-center gap-2 bg-darker p-2.5 rounded-xl border border-card cursor-pointer">
+              <input type="radio" name="balAction" value="deduct" class="text-red-500">
+              <span class="text-xs font-bold text-rose-400">- Deduct Money</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Amount (INR)</label>
+          <input type="number" id="modalAmount" required min="1" step="0.01" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Admin Reason / Note</label>
+          <input type="text" id="modalNote" placeholder="e.g. Deposit bonus or Correction" class="w-full bg-darker border border-card rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeBalanceModal()" class="flex-1 bg-darker hover:bg-white/5 border border-card py-2.5 rounded-xl text-xs font-bold text-gray-300">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-red-600/30">
+            Update Wallet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-card border border-red-500/30 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2 transform translate-y-20 opacity-0 transition duration-300">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+    <span id="toastMsg">Message</span>
+  </div>
+
+  <script>
+    let token = localStorage.getItem("aviator_admin_token");
+    let allUsersCache = [];
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      const toastIcon = document.getElementById("toastIcon");
+      toastMsg.innerText = msg;
+      toastIcon.className = isError ? "fa-solid fa-triangle-exclamation text-rose-500 text-base" : "fa-solid fa-circle-check text-emerald-400 text-base";
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => toast.classList.add("translate-y-20", "opacity-0"), 3000);
+    }
+
+    // CHECK AUTH ON LOAD
+    window.addEventListener("DOMContentLoaded", () => {
+      if (token) {
+        verifyAdminSession();
+      } else {
+        document.getElementById("loginOverlay").classList.remove("hidden");
+      }
+    });
+
+    // LOGIN FORM
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userName = document.getElementById("adminUser").value.trim();
+      const password = document.getElementById("adminPass").value.trim();
+      const errBox = document.getElementById("loginError");
+
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userName, password }),
+        });
+        const data = await res.json();
+        if (data.status) {
+          token = data.token;
+          localStorage.setItem("aviator_admin_token", token);
+          document.getElementById("loginOverlay").classList.add("hidden");
+          document.getElementById("appContainer").classList.remove("hidden");
+          initAdminApp();
+        } else {
+          errBox.innerText = data.message || "Invalid login";
+          errBox.classList.remove("hidden");
+        }
+      } catch (err) {
+        errBox.innerText = "Error connecting to server";
+        errBox.classList.remove("hidden");
+      }
+    });
+
+    function logoutAdmin() {
+      localStorage.removeItem("aviator_admin_token");
+      location.reload();
+    }
+
+    async function verifyAdminSession() {
+      try {
+        const res = await fetch("/api/admin/overview", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          document.getElementById("loginOverlay").classList.add("hidden");
+          document.getElementById("appContainer").classList.remove("hidden");
+          initAdminApp();
+        } else {
+          localStorage.removeItem("aviator_admin_token");
+          document.getElementById("loginOverlay").classList.remove("hidden");
+        }
+      } catch (e) {
+        document.getElementById("loginOverlay").classList.remove("hidden");
+      }
+    }
+
+    function initAdminApp() {
+      startLivePolling();
+      loadOverviewStats();
+      loadUsers();
+      loadDeposits();
+      loadWithdrawals();
+      loadSettings();
+      loadRounds();
+    }
+
+    // TAB SWITCHING
+    function switchTab(tabId) {
+      document.querySelectorAll("main > section").forEach(sec => sec.classList.add("hidden"));
+      const targetSec = document.getElementById(`tab-${tabId}`);
+      if (targetSec) targetSec.classList.remove("hidden");
+
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.remove("bg-red-600", "text-white");
+        btn.classList.add("text-gray-400");
+      });
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeNav) {
+        activeNav.classList.add("bg-red-600", "text-white");
+        activeNav.classList.remove("text-gray-400");
+      }
+
+      if (tabId === "overview") loadOverviewStats();
+      if (tabId === "users") loadUsers();
+      if (tabId === "deposits") loadDeposits();
+      if (tabId === "withdrawals") loadWithdrawals();
+      if (tabId === "settings") loadSettings();
+      if (tabId === "rounds") loadRounds();
+    }
+
+    // LIVE GAME STATE POLLING
+    let liveInterval = null;
+    function startLivePolling() {
+      if (liveInterval) clearInterval(liveInterval);
+      pollLive();
+      liveInterval = setInterval(pollLive, 600);
+    }
+
+    async function pollLive() {
+      try {
+        const res = await fetch("/api/admin/live", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.status) return;
+
+        // Multiplier & Flight state
+        const multEl = document.getElementById("liveMultiplierText");
+        const subEl = document.getElementById("liveSubText");
+        const badge = document.getElementById("liveStateBadge");
+        const roundNumEl = document.getElementById("liveRoundNumber");
+        const targetDisp = document.getElementById("liveTargetDisplay");
+
+        roundNumEl.innerText = data.roundNumber || 1;
+
+        if (data.gameState === "PLAYING") {
+          badge.innerText = "FLYING NOW";
+          badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-600/20 text-red-400 border border-red-500/40 animate-pulse";
+          multEl.innerText = Number(data.currentNum).toFixed(2) + "x";
+          multEl.className = "text-6xl md:text-8xl font-black font-racing tracking-tight text-red-500 red-glow";
+          subEl.innerText = "Plane in flight! Players cashing out...";
+          targetDisp.innerText = data.crashTarget ? `${data.crashTarget.toFixed(2)}x` : "--";
+        } else if (data.gameState === "GAMEEND") {
+          badge.innerText = "CRASHED";
+          badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-600/30 text-rose-300 border border-rose-500";
+          multEl.innerText = Number(data.currentNum).toFixed(2) + "x";
+          multEl.className = "text-6xl md:text-8xl font-black font-racing tracking-tight text-gray-500";
+          subEl.innerText = "FLEW AWAY!";
+          targetDisp.innerText = `${data.crashTarget.toFixed(2)}x`;
+        } else {
+          // BET
+          badge.innerText = "WAITING FOR BETS";
+          badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30";
+          multEl.innerText = "1.00x";
+          multEl.className = "text-6xl md:text-8xl font-black font-racing tracking-tight text-gray-400";
+          subEl.innerText = "Next round begins in 5 seconds";
+          targetDisp.innerText = data.nextCrashTarget ? `${data.nextCrashTarget}x (LOCKED)` : "Auto (Fair)";
+        }
+
+        // Active Lock Display
+        const lockDisplay = document.getElementById("activeLockDisplay");
+        const sidebarStatus = document.getElementById("sidebarForcedStatus");
+        if (data.nextCrashTarget) {
+          lockDisplay.innerText = `LOCKED: Crash at ${data.nextCrashTarget}x`;
+          lockDisplay.className = "text-sm font-bold text-red-400 mt-0.5 animate-pulse";
+          sidebarStatus.innerText = `Next: ${data.nextCrashTarget}x (Forced)`;
+          sidebarStatus.className = "text-sm font-bold text-red-400";
+        } else {
+          lockDisplay.innerText = "Automatic Random Mode (Fair RTP)";
+          lockDisplay.className = "text-sm font-bold text-emerald-400 mt-0.5";
+          sidebarStatus.innerText = "Auto (RTP 96%)";
+          sidebarStatus.className = "text-sm font-bold text-emerald-400";
+        }
+
+        // Active Bets table & stats
+        const bets = data.activeBets || [];
+        document.getElementById("liveActiveBetsCount").innerText = bets.length;
+        document.getElementById("activeBetsTableCount").innerText = bets.length;
+
+        let totalVol = 0;
+        let totalCash = 0;
+        bets.forEach(b => {
+          totalVol += b.betAmount;
+          if (b.cashouted) totalCash += b.cashOut;
+        });
+        document.getElementById("liveActiveVolume").innerText = totalVol.toFixed(2);
+        document.getElementById("liveActivePayout").innerText = totalCash.toFixed(2);
+
+        // Render Active Bets Table
+        const tbody = document.getElementById("activeBetsTbody");
+        if (bets.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-gray-500 text-xs">Waiting for bets...</td></tr>`;
+        } else {
+          tbody.innerHTML = bets.map(b => `
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-2.5 px-4 flex items-center gap-2">
+                <img src="${b.img || './avatars/av-5.png'}" class="w-6 h-6 rounded-full border border-card" alt="avatar">
+                <span class="font-bold ${b.userId && !b.userId.startsWith('bot_') ? 'text-amber-400' : 'text-gray-300'}">
+                  ${b.name} ${b.userId && !b.userId.startsWith('bot_') ? '<span class="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1 rounded uppercase">Real</span>' : ''}
+                </span>
+              </td>
+              <td class="py-2.5 px-4 uppercase text-xs text-gray-400">${b.type}</td>
+              <td class="py-2.5 px-4 font-bold text-white">₹${Number(b.betAmount).toFixed(2)}</td>
+              <td class="py-2.5 px-4 text-xs text-gray-400">${b.target ? Number(b.target).toFixed(2) + 'x' : '--'}</td>
+              <td class="py-2.5 px-4 font-bold ${b.cashouted ? 'text-emerald-400' : 'text-gray-400'}">
+                ${b.cashouted ? Number(b.target).toFixed(2) + 'x' : '--'}
+              </td>
+              <td class="py-2.5 px-4 font-bold ${b.cashouted ? 'text-emerald-400' : 'text-gray-500'}">
+                ${b.cashouted ? '₹' + Number(b.cashOut).toFixed(2) : '--'}
+              </td>
+              <td class="py-2.5 px-4">
+                <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${b.cashouted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+                  ${b.cashouted ? 'CASHED' : 'FLYING'}
+                </span>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (err) {}
+    }
+
+    // FORCE CRASH
+    async function applyForcedCrash() {
+      const val = document.getElementById("forceTargetInput").value;
+      if (!val || Number(val) < 1.0) {
+        showToast("Enter a multiplier of at least 1.00x", true);
+        return;
+      }
+      try {
+        const res = await fetch("/api/admin/set-crash", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ target: val })
+        });
+        const data = await res.json();
+        if (data.status) {
+          showToast(data.message);
+          document.getElementById("forceTargetInput").value = "";
+          pollLive();
+        } else {
+          showToast(data.message, true);
+        }
+      } catch (err) {
+        showToast("Failed to apply target", true);
+      }
+    }
+
+    function setQuickForce(num) {
+      document.getElementById("forceTargetInput").value = num.toFixed(2);
+      applyForcedCrash();
+    }
+
+    async function resetForcedCrash() {
+      try {
+        const res = await fetch("/api/admin/set-crash", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ target: null })
+        });
+        const data = await res.json();
+        if (data.status) {
+          showToast(data.message);
+          document.getElementById("forceTargetInput").value = "";
+          pollLive();
+        }
+      } catch (e) {
+        showToast("Failed to reset", true);
+      }
+    }
+
+    // OVERVIEW STATS
+    async function loadOverviewStats() {
+      try {
+        const res = await fetch("/api/admin/overview", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.status) {
+          const d = json.data;
+          document.getElementById("statTotalUsers").innerText = d.totalUsers;
+          document.getElementById("statTotalProfit").innerText = `₹${d.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          document.getElementById("statBetsVolume").innerText = `₹${d.totalBetsVolume.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          document.getElementById("statUserBalance").innerText = `₹${d.totalUserBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          document.getElementById("statPendingDeposits").innerText = d.pendingDeposits;
+          document.getElementById("statPendingWithdrawals").innerText = d.pendingWithdrawals;
+          document.getElementById("statTotalRounds").innerText = d.totalRounds;
+
+          document.getElementById("badge-deposits").innerText = d.pendingDeposits;
+          document.getElementById("badge-withdrawals").innerText = d.pendingWithdrawals;
+        }
+      } catch (e) {}
+    }
+
+    // USERS LIST
+    async function loadUsers() {
+      try {
+        const res = await fetch("/api/admin/users", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.status) {
+          allUsersCache = json.users || [];
+          renderUsersTable(allUsersCache);
+        }
+      } catch (e) {}
+    }
+
+    function renderUsersTable(users) {
+      const tbody = document.getElementById("usersTbody");
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-gray-500">No users found</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr class="hover:bg-white/5 transition">
+          <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-slate-800 text-gray-300 flex items-center justify-center text-xs">
+              ${u.userName.charAt(0).toUpperCase()}
+            </div>
+            ${u.userName}
+          </td>
+          <td class="py-3 px-4 text-xs text-gray-400">${u.phone || 'N/A'}</td>
+          <td class="py-3 px-4">
+            <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-gray-400'}">
+              ${u.role}
+            </span>
+          </td>
+          <td class="py-3 px-4 font-bold text-emerald-400">₹${Number(u.balance).toFixed(2)}</td>
+          <td class="py-3 px-4">
+            <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded ${u.status === 'blocked' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}">
+              ${u.status}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-xs text-gray-400">${new Date(u.createdAt).toLocaleDateString()}</td>
+          <td class="py-3 px-4 text-right space-x-1">
+            <button onclick="openBalanceModal('${u.id}', '${u.userName}', ${u.balance})" class="bg-darker hover:bg-white/10 border border-card px-2.5 py-1 rounded-lg text-xs text-emerald-400 font-semibold" title="Add or Deduct balance">
+              <i class="fa-solid fa-pen-to-square mr-1"></i> Balance
+            </button>
+            ${u.role !== 'admin' ? `
+              <button onclick="toggleUserStatus('${u.id}')" class="bg-darker hover:bg-white/10 border border-card px-2.5 py-1 rounded-lg text-xs ${u.status === 'blocked' ? 'text-emerald-400' : 'text-rose-400'} font-semibold">
+                ${u.status === 'blocked' ? 'Unblock' : 'Block'}
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterUsersTable() {
+      const q = document.getElementById("userSearchInput").value.toLowerCase();
+      const filtered = allUsersCache.filter(u => u.userName.toLowerCase().includes(q) || (u.phone && u.phone.includes(q)));
+      renderUsersTable(filtered);
+    }
+
+    // BALANCE EDIT MODAL
+    function openBalanceModal(id, username, bal) {
+      document.getElementById("modalUserId").value = id;
+      document.getElementById("modalUsername").innerText = username;
+      document.getElementById("modalCurrentBalance").innerText = bal.toFixed(2);
+      document.getElementById("modalAmount").value = "";
+      document.getElementById("modalNote").value = "";
+      document.getElementById("balanceModal").classList.remove("hidden");
+    }
+
+    function closeBalanceModal() {
+      document.getElementById("balanceModal").classList.add("hidden");
+    }
+
+    document.getElementById("balanceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById("modalUserId").value;
+      const amount = document.getElementById("modalAmount").value;
+      const action = document.querySelector('input[name="balAction"]:checked').value;
+      const note = document.getElementById("modalNote").value;
+
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/adjust-balance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ amount, action, note })
+        });
+        const data = await res.json();
+        if (data.status) {
+          showToast(data.message);
+          closeBalanceModal();
+          loadUsers();
+          loadOverviewStats();
+        } else {
+          showToast(data.message, true);
+        }
+      } catch (e) {
+        showToast("Error updating balance", true);
+      }
+    });
+
+    async function toggleUserStatus(userId) {
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/toggle-status`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.status) {
+          showToast(data.message);
+          loadUsers();
+        }
+      } catch (e) {
+        showToast("Error changing status", true);
+      }
+    }
+
+    // DEPOSITS
+    async function loadDeposits() {
+      try {
+        const res = await fetch("/api/admin/deposits", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.status) {
+          const tbody = document.getElementById("depositsTbody");
+          const list = json.data || [];
+          if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-gray-500">No deposit requests yet.</td></tr>`;
+            return;
+          }
+          tbody.innerHTML = list.map(tx => `
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 text-xs text-gray-400">${new Date(tx.createdAt).toLocaleString()}</td>
+              <td class="py-3 px-4 font-bold text-white">${tx.userName}</td>
+              <td class="py-3 px-4 font-bold text-emerald-400">₹${Number(tx.amount).toFixed(2)}</td>
+              <td class="py-3 px-4 text-xs font-mono text-gray-300">${tx.utr || 'N/A'}</td>
+              <td class="py-3 px-4">
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded ${tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : tx.status === 'rejected' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400 animate-pulse'}">
+                  ${tx.status}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right space-x-1">
+                ${tx.status === 'pending' ? `
+                  <button onclick="approveDeposit('${tx.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1 rounded-lg font-bold">Approve</button>
+                  <button onclick="rejectDeposit('${tx.id}')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-2.5 py-1 rounded-lg font-bold">Reject</button>
+                ` : `<span class="text-xs text-gray-500">Settled</span>`}
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function approveDeposit(id) {
+      if (!confirm("Approve this deposit and credit player wallet?")) return;
+      try {
+        const res = await fetch(`/api/admin/deposits/${id}/approve`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        showToast(d.message, !d.status);
+        loadDeposits();
+        loadOverviewStats();
+      } catch (e) { showToast("Failed to approve", true); }
+    }
+
+    async function rejectDeposit(id) {
+      if (!confirm("Reject this deposit request?")) return;
+      try {
+        const res = await fetch(`/api/admin/deposits/${id}/reject`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        showToast(d.message, !d.status);
+        loadDeposits();
+        loadOverviewStats();
+      } catch (e) { showToast("Failed to reject", true); }
+    }
+
+    // WITHDRAWALS
+    async function loadWithdrawals() {
+      try {
+        const res = await fetch("/api/admin/withdrawals", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.status) {
+          const tbody = document.getElementById("withdrawalsTbody");
+          const list = json.data || [];
+          if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-gray-500">No withdrawal requests yet.</td></tr>`;
+            return;
+          }
+          tbody.innerHTML = list.map(tx => `
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 text-xs text-gray-400">${new Date(tx.createdAt).toLocaleString()}</td>
+              <td class="py-3 px-4 font-bold text-white">${tx.userName}</td>
+              <td class="py-3 px-4 font-bold text-rose-400">₹${Number(tx.amount).toFixed(2)}</td>
+              <td class="py-3 px-4 text-xs font-mono text-emerald-400 font-bold">${tx.upiId || 'N/A'}</td>
+              <td class="py-3 px-4 text-xs text-gray-300">${tx.accountName || 'N/A'}</td>
+              <td class="py-3 px-4">
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded ${tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : tx.status === 'rejected' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400 animate-pulse'}">
+                  ${tx.status}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right space-x-1">
+                ${tx.status === 'pending' ? `
+                  <button onclick="approveWithdrawal('${tx.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1 rounded-lg font-bold">Mark Paid</button>
+                  <button onclick="rejectWithdrawal('${tx.id}')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-2.5 py-1 rounded-lg font-bold">Reject & Refund</button>
+                ` : `<span class="text-xs text-gray-500">Settled</span>`}
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function approveWithdrawal(id) {
+      if (!confirm("Confirm you have paid this withdrawal via UPI?")) return;
+      try {
+        const res = await fetch(`/api/admin/withdrawals/${id}/approve`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        showToast(d.message, !d.status);
+        loadWithdrawals();
+        loadOverviewStats();
+      } catch (e) { showToast("Failed to approve", true); }
+    }
+
+    async function rejectWithdrawal(id) {
+      if (!confirm("Reject and refund money back to user wallet?")) return;
+      try {
+        const res = await fetch(`/api/admin/withdrawals/${id}/reject`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        showToast(d.message, !d.status);
+        loadWithdrawals();
+        loadOverviewStats();
+      } catch (e) { showToast("Failed to reject", true); }
+    }
+
+    // SETTINGS
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings");
+        const json = await res.json();
+        if (json.status && json.settings) {
+          const s = json.settings;
+          document.getElementById("settingMinBet").value = s.minBet || 10;
+          document.getElementById("settingMaxBet").value = s.maxBet || 10000;
+          document.getElementById("settingHouseEdge").value = s.houseEdge || 4;
+          document.getElementById("settingBotCount").value = s.botCount || 20;
+          document.getElementById("settingUpiId").value = s.upiId || "";
+          document.getElementById("settingUpiName").value = s.upiName || "";
+        }
+      } catch (e) {}
+    }
+
+    document.getElementById("settingsForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const minBet = document.getElementById("settingMinBet").value;
+      const maxBet = document.getElementById("settingMaxBet").value;
+      const houseEdge = document.getElementById("settingHouseEdge").value;
+      const botCount = document.getElementById("settingBotCount").value;
+      const upiId = document.getElementById("settingUpiId").value;
+      const upiName = document.getElementById("settingUpiName").value;
+
+      try {
+        const res = await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ minBet, maxBet, houseEdge, botCount, upiId, upiName })
+        });
+        const d = await res.json();
+        showToast(d.message, !d.status);
+      } catch (e) {
+        showToast("Failed to save settings", true);
+      }
+    });
+
+    // ROUNDS HISTORY
+    async function loadRounds() {
+      try {
+        const res = await fetch("/api/admin/rounds", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.status) {
+          const tbody = document.getElementById("roundsTbody");
+          const rounds = json.data || [];
+          if (rounds.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-gray-500">No rounds history recorded yet</td></tr>`;
+            return;
+          }
+          tbody.innerHTML = rounds.map(r => `
+            <tr class="hover:bg-white/5 transition">
+              <td class="py-3 px-4 font-bold text-white">#${r.roundNumber}</td>
+              <td class="py-3 px-4 font-black font-racing text-base ${Number(r.crashMultiplier) < 2 ? 'text-blue-400' : Number(r.crashMultiplier) < 10 ? 'text-purple-400' : 'text-red-500'}">
+                ${Number(r.crashMultiplier).toFixed(2)}x
+              </td>
+              <td class="py-3 px-4">
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded ${r.forced ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-gray-400'}">
+                  ${r.forced ? 'Forced' : 'Auto'}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-xs text-gray-300">${r.totalBets}</td>
+              <td class="py-3 px-4 text-xs font-bold text-white">₹${Number(r.totalBetAmount || 0).toFixed(2)}</td>
+              <td class="py-3 px-4 text-xs font-bold text-amber-400">₹${Number(r.totalPayout || 0).toFixed(2)}</td>
+              <td class="py-3 px-4 text-xs font-bold ${Number(r.platformProfit || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                ₹${Number(r.platformProfit || 0).toFixed(2)}
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+  </script>
+</body>
+</html>

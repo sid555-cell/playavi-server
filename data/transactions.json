@@ -1,0 +1,24 @@
+[
+  {
+    "id": "id_1793475181814_20c7w1",
+    "userId": "user_demo_1",
+    "userName": "player1",
+    "type": "bet_win",
+    "amount": 28.2,
+    "status": "approved",
+    "note": "Aviator win at 1.41x",
+    "createdAt": "2026-10-31T19:33:01.814Z",
+    "_id": "id_1793475181814_20c7w1"
+  },
+  {
+    "id": "id_1793475667278_ds51yn",
+    "userId": "user_demo_1",
+    "userName": "player1",
+    "type": "bet_win",
+    "amount": 24,
+    "status": "approved",
+    "note": "Aviator win at 1.20x",
+    "createdAt": "2026-10-31T19:41:07.278Z",
+    "_id": "id_1793475667278_ds51yn"
+  }
+]

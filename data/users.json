@@ -1,0 +1,36 @@
+[
+  {
+    "id": "admin_1",
+    "userName": "admin",
+    "phone": "9999999999",
+    "password": "$2a$10$8N6shkmW.HzjOM/b6Rubz.XXgxu91XNObtzbQ33TV/NcbxYfMWkCa",
+    "balance": 100000,
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-10-31T14:14:30.333Z",
+    "_id": "admin_1"
+  },
+  {
+    "id": "user_demo_1",
+    "userName": "player1",
+    "phone": "9876543210",
+    "password": "$2a$10$hTi/gEIhzpA6KEbFpGvtie7xMUc/ft5v80VKf2ijclhMiYPx4YFZy",
+    "balance": 2512.2,
+    "role": "user",
+    "status": "active",
+    "createdAt": "2026-10-31T14:14:30.412Z",
+    "_id": "user_demo_1",
+    "updatedAt": "2026-10-31T19:41:07.276Z"
+  },
+  {
+    "id": "id_1793475785841_l0em6u",
+    "userName": "Siddharth",
+    "phone": "6269621033",
+    "password": "$2a$10$duGY8J7YftHm/eR6yPopculSIhEo5HvKjleW31MHHp4fTRBhTDjr.",
+    "balance": 1000,
+    "role": "user",
+    "status": "active",
+    "createdAt": "2026-10-31T19:43:05.841Z",
+    "_id": "id_1793475785841_l0em6u"
+  }
+]
