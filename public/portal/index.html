@@ -60,11 +60,6 @@
         <i class="fa-solid fa-arrow-up-from-bracket text-[10px] text-amber-400"></i> Withdraw
       </button>
 
-      <!-- DOWNLOAD APP BUTTON -->
-      <a href="/download" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-mobile-screen text-[10px]"></i> App APK
-      </a>
-
       <!-- AUTH USER / LOGIN BUTTON -->
       <div id="authArea">
         <button onclick="openAuthModal('login')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full transition shadow-md shadow-red-600/30">
@@ -271,12 +266,9 @@
           <input type="text" id="depositUtr" placeholder="Enter UTR from payment receipt" class="w-full bg-darkest border border-card rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
         </div>
 
-        <div class="flex gap-2 pt-2">
-          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-600/30">
+        <div class="pt-2">
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-600/30">
             Submit Deposit
-          </button>
-          <button type="button" onclick="instantDemoDeposit()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold px-3 py-2.5 rounded-xl text-xs border border-slate-700 whitespace-nowrap">
-            + Demo ₹1000
           </button>
         </div>
       </form>
@@ -347,7 +339,7 @@
 
       <div class="mt-4 text-center text-xs text-gray-400">
         <span id="authSwitchText">Don't have an account?</span>
-        <button onclick="toggleAuthMode()" class="text-red-400 font-bold ml-1 hover:underline" id="authSwitchBtn">Register (Get ₹1,000 Bonus)</button>
+        <button onclick="toggleAuthMode()" class="text-red-400 font-bold ml-1 hover:underline" id="authSwitchBtn">Register (Get ₹50 Bonus)</button>
       </div>
       <div id="authError" class="mt-3 text-xs text-red-400 text-center hidden"></div>
     </div>
@@ -715,10 +707,16 @@
         container.innerHTML = `<div class="text-center text-xs text-gray-500 py-6">Waiting for bets...</div>`;
         return;
       }
-      container.innerHTML = bets.map((b) => `
+      const avatarColors = ['bg-red-600', 'bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-600', 'bg-indigo-600', 'bg-pink-600', 'bg-teal-600'];
+      container.innerHTML = bets.map((b) => {
+        const initial = (b.name ? b.name.trim().charAt(0) : 'U').toUpperCase();
+        const colorClass = avatarColors[(b.name ? b.name.charCodeAt(0) : 0) % avatarColors.length];
+        return `
         <div class="flex items-center justify-between p-2 rounded-xl bg-darkest border border-[#1e232d] text-xs">
           <div class="flex items-center gap-2">
-            <img src="${b.img || './avatars/av-5.png'}" class="w-6 h-6 rounded-full border border-card" alt="avatar">
+            <div class="w-6 h-6 rounded-full ${colorClass} text-white flex items-center justify-center text-[10px] font-bold shadow-xs flex-shrink-0">
+              ${initial}
+            </div>
             <span class="font-bold text-gray-300">${b.name}</span>
           </div>
           <div class="flex items-center gap-3">
@@ -731,7 +729,7 @@
             `}
           </div>
         </div>
-      `).join("");
+      `}).join("");
     }
 
     function switchSidebarTab(tab) {
@@ -852,11 +850,11 @@
     function updateAuthModalUI() {
       const isReg = authMode === "register";
       document.getElementById("authTitle").innerText = isReg ? "CREATE ACCOUNT" : "PLAYER LOGIN";
-      document.getElementById("authSubtitle").innerText = isReg ? "Get ₹1,000 Free Welcome Bonus on signup" : "Enter your credentials to play and win";
+      document.getElementById("authSubtitle").innerText = isReg ? "Get ₹50 Free Bonus on signup. Deposit to play more!" : "Enter your credentials to play and win";
       document.getElementById("phoneGroup").className = isReg ? "block" : "hidden";
-      document.getElementById("authSubmitBtn").innerText = isReg ? "Register & Claim ₹1,000" : "Sign In";
+      document.getElementById("authSubmitBtn").innerText = isReg ? "Register & Claim ₹50" : "Sign In";
       document.getElementById("authSwitchText").innerText = isReg ? "Already have an account?" : "Don't have an account?";
-      document.getElementById("authSwitchBtn").innerText = isReg ? "Sign In" : "Register (Get ₹1,000 Bonus)";
+      document.getElementById("authSwitchBtn").innerText = isReg ? "Sign In" : "Register (Get ₹50 Bonus)";
       document.getElementById("authError").classList.add("hidden");
     }
 
