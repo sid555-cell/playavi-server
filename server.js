@@ -43,13 +43,37 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve Admin Panel and Portal
+// Explicit HTML route handlers for /portal, /admin and root /
+const fs = require("fs");
+
+app.get(["/portal", "/portal/"], (req, res) => {
+  const portalPath = path.join(__dirname, "public", "portal", "index.html");
+  if (fs.existsSync(portalPath)) {
+    return res.sendFile(portalPath);
+  }
+  const files = fs.existsSync(__dirname) ? fs.readdirSync(__dirname).join(", ") : "none";
+  res.status(404).send(`<h3>PlayAvi Portal Not Found</h3><p>Expected at: ${portalPath}</p><p>Existing files: ${files}</p>`);
+});
+
+app.get(["/admin", "/admin/"], (req, res) => {
+  const adminPath = path.join(__dirname, "public", "admin", "index.html");
+  if (fs.existsSync(adminPath)) {
+    return res.sendFile(adminPath);
+  }
+  const files = fs.existsSync(__dirname) ? fs.readdirSync(__dirname).join(", ") : "none";
+  res.status(404).send(`<h3>PlayAvi Admin Not Found</h3><p>Expected at: ${adminPath}</p><p>Existing files: ${files}</p>`);
+});
+
+app.get("/", (req, res) => {
+  res.redirect("/portal");
+});
+
+// Serve Admin Panel and Portal static assets
 app.use("/admin", express.static(path.join(__dirname, "public", "admin")));
 app.use("/portal", express.static(path.join(__dirname, "public", "portal")));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Serve Unity WebGL and Avatars (from local public or parent public)
-const fs = require("fs");
 const unityPublicPath = fs.existsSync(path.join(__dirname, "public", "unity"))
   ? path.join(__dirname, "public")
   : path.join(__dirname, "..", "public");
@@ -112,7 +136,7 @@ app.post("/api/register", (req, res) => {
     userName,
     phone: phone || "",
     password: hashedPassword,
-    balance: 1000, // ₹1,000 Welcome Bonus
+    balance: 50, // ₹50 Registration Bonus
     role: "user",
     status: "active",
     createdAt: new Date().toISOString(),
@@ -126,7 +150,7 @@ app.post("/api/register", (req, res) => {
 
   res.json({
     status: true,
-    message: "Registration successful! ₹1,000 welcome bonus added.",
+    message: "Registration successful! ₹50 bonus added.",
     token,
     user: { id: newUser.id, userName: newUser.userName, balance: newUser.balance, role: newUser.role },
   });
